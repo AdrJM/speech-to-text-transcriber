@@ -1,5 +1,6 @@
 import whisper
 import torch
+from pathlib import Path
 
 class WhisperEngine:
     def __init__(self, model_size: str = "medium"):
@@ -7,13 +8,14 @@ class WhisperEngine:
         self.model_size = model_size
         self.model = self._load_model()
 
-    def _load_model(self):
+    #Loads Whisper model. Called once in __init__ to avoid reloading on every transcription.
+    def _load_model(self):        
         print(f"Loading Whisper model '{self.model_size}' on '{self.device}'...")
         return whisper.load_model(self.model_size, device=self.device)
     
-    def transcribe(self, audio_path: str, language:str = "pl") -> dict:
+    def transcribe(self, audio_path: Path, language: str = "pl") -> dict:
         result = self.model.transcribe(
-            audio_path,
+            str(audio_path),
             language = language,
             fp16 = torch.cuda.is_available()
         )
