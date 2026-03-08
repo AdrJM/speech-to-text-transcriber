@@ -1,6 +1,7 @@
 import os
 import argparse
 import sys
+from pathlib import Path
 from infrastructure.whisper_engine import WhisperEngine
 from application.transcription_service import TranscriptionService
 from infrastructure.export.json_exporter import JsonExporter
@@ -13,18 +14,26 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.audio_path):
-        print("File does not exist")
+    audio_path = Path(args.audio_path)
+
+    if not audio_path.exists():
+        print(f"Error: File '{audio_path}' does not exist.")
         sys.exit(1)
-
-    engine = WhisperEngine(model_size = MODEL_SIZE)
-    service = TranscriptionService(engine)
-    exporter = JsonExporter()
     
-    result = service.transcribe_file(args.audio_path)
-    print("\n--- TRANSCRIPTION ---\n")
-    exporter.export(result, "output.json")
+    try:
+        engine = WhisperEngine(model_size = MODEL_SIZE)
+        service = TranscriptionService(engine)
+        exporter = JsonExporter()
 
+        result = service.transcribe_file(audio_path, args.language)
+
+        output_file = audio_path.with_suffix(".json")
+        exporter.export(result, output_file)
+
+        print(f"\nTranscription saved to {output_file}")
+    except Exception as e:
+        print(f"Error during transcription: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
