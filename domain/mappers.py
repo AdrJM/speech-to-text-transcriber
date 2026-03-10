@@ -19,4 +19,7 @@ def map_to_domain(result: dict) -> TranscriptionResult:
         if not isinstance(language, str):
             raise ValueError("Invalid language returned from Whisper")
         
-        return TranscriptionResult(language = language, segments = segments)
+        return TranscriptionResult(
+            language = language, 
+            segments = segments
+        )

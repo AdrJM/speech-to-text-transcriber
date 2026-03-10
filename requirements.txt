@@ -1,2 +1,2 @@
 whisper
-PyQt6
+PyQt6python-dotenv==1.2.2
