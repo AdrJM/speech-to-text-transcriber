@@ -14,10 +14,10 @@ class WhisperEngine:
         return whisper.load_model(self.model_size, device=self.device)
     
     def transcribe(self, audio_path: Path, language: str = "pl") -> dict:
-        result = self.model.transcribe(
+        results = self.model.transcribe(
             str(audio_path),
             language = language,
             fp16 = torch.cuda.is_available()
         )
         
-        return result
+        return results
