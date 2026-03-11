@@ -1,12 +1,15 @@
-import os
+
 import argparse
 import sys
 from pathlib import Path
+from PyQt6.QtWidgets import QApplication
+from presentation.main_window import MainWindow
 from infrastructure.whisper_engine import WhisperEngine
 from application.transcription_service import TranscriptionService
 from infrastructure.export.json_exporter import JsonExporter
 from config.settings import MODEL_SIZE
 
+#   CLI
 def main():
     parser = argparse.ArgumentParser(description = "Speech to Text Application")
     parser.add_argument("audio_path", help = "Path to audio file")
@@ -35,5 +38,15 @@ def main():
         print(f"Error during transcription: {e}")
         sys.exit(1)
 
+#   GUI
+def run_gui():
+    app = QApplication([])
+    window = MainWindow()
+    window.show()
+    app.exec()
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1:
+        main()     # CLI
+    else:
+        run_gui()  # GUI
