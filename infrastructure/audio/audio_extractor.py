@@ -2,9 +2,10 @@ import subprocess
 from pathlib import Path
 
 class AudioExtractor:
-    def extract(self, video_path: str, output_path: str) -> str:
+    def extract(self, video_path: Path) -> Path:
         video = Path(video_path)
-        output = Path(output_path)
+        output = video_path.parent / "audio" / video_path.with_suffix(".wav").name
+        output.parent.mkdir(parents=True, exist_ok=True)
 
         command = [
             "ffmpeg",
@@ -18,4 +19,4 @@ class AudioExtractor:
 
         subprocess.run(command, check=True)
 
-        return str(output)
+        return output
