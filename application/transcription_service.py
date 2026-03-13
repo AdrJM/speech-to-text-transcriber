@@ -42,6 +42,10 @@ class TranscriptionService:
         return [(audio_path, 0)]
     
     def _transcribe_chunks(self, chunks, language):
+        print(f"Liczba chunków: {len(chunks)}")
+        for i, (path, offset) in enumerate(chunks):
+            print(f"Przetwarzam chunk {i}: {path}, offset: {offset}")
+        
         if self.parallel_transcriber:
             return self.parallel_transcriber.transcribe_chunks(chunks, language)
         

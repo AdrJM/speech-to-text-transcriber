@@ -9,6 +9,7 @@ class AudioExtractor:
 
         command = [
             "ffmpeg",
+            "-y",
             "-i", str(video),
             "-vn",
             "-acodec", "pcm_s16le",

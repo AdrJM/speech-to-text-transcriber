@@ -1,24 +1,38 @@
+import subprocess
 from pydub import AudioSegment
 from pathlib import Path
 
 class AudioSplitter:
-    def split(self, audio_path: Path, output_path: Path, chunk_length_sec: int = 60):
-        audio = AudioSegment.from_wav(audio_path)
-
-        chunk_length_ms = chunk_length_sec * 1000
+    def split(self, file_path: Path, chunk_length_sec: int = 60):
+        output_path = Path(file_path).parent / "chunks"
         output_path.mkdir(parents = True, exist_ok = True)
 
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(file_path)],
+            capture_output=True, text=True, check=True
+        )
+        duration = float(result.stdout.strip())
+
         chunks = []
+        index = 0
+        offset = 0
 
-        for i in range(0, len(audio), chunk_length_ms):
-            chunk = audio[i:i + chunk_length_ms]
+        while offset < duration:
+            chunk_path = output_path / f"chunk_{index}.wav"
 
-            index = i // chunk_length_ms
-            offset = index * chunk_length_sec
+            subprocess.run([
+                "ffmpeg", "-y",
+                "-i", str(file_path),
+                "-ss", str(offset),
+                "-t", str(chunk_length_sec),
+                "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+                str(chunk_path)
+            ], check = True)
+            if chunk_path.stat().st_size > 1000:  # > 1KB
+                chunks.append((chunk_path, offset))
             
-            output = output_path / f"chunk_{index}.wav"
+            offset += chunk_length_sec
+            index += 1
             
-            chunk.export(output, format="wav")
-            chunks.append((output, offset))
-
         return chunks

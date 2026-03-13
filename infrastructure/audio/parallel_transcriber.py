@@ -36,7 +36,7 @@ class ParallelTranscriber:
         Transcribes a list of (chunk_path, offset) tuples in parallel.
         Returns (segments, detected_language) — same shape as TranscriptionService._transcribe_chunks.
         """
-
+        
         results: dict[int, tuple[list[Segment], str]] = {}
 
         with ThreadPoolExecutor(max_workers = self.max_workers) as executor:

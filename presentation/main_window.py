@@ -10,11 +10,13 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QFileDialog,
     QComboBox,
-    QMessageBox
+    QMessageBox,
+    QCheckBox
 )
 
+from presentation.workers.model_download_worker import ModelDownloadWorker
 from presentation.segment_editor_window import SegmentEditorWindow
-from presentation.worker import TranscriptionWorker
+from presentation.workers.transcription_worker import TranscriptionWorker
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -47,6 +49,12 @@ class MainWindow(QMainWindow):
 
         self.model_combobox.addItems(["tiny", "base", "small", "medium", "large"] )
 
+        checkbox_layout = QVBoxLayout()
+        self.split_checkbox = QCheckBox("Podziel audio na chunki")
+        self.split_checkbox.stateChanged.connect(self._on_split_toggled)
+        self.parallel_checkbox = QCheckBox("Transkrybuj równolegle")
+        self.parallel_checkbox.setEnabled(False)
+
         transcribe_layout = QHBoxLayout()
         self.transcribe_button = QPushButton("Transkrybuj")
 
@@ -67,6 +75,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(transcribe_layout)
         layout.addLayout(status_layout)
         layout.addLayout(edit_layout)
+        layout.addLayout(checkbox_layout)
 
         whisper_options_layout.addLayout(language_layout)
         whisper_options_layout.addLayout(model_layout)
@@ -79,7 +88,10 @@ class MainWindow(QMainWindow):
 
         model_layout.addWidget(model_label)
         model_layout.addWidget(self.model_combobox)
-        
+
+        checkbox_layout.addWidget(self.split_checkbox)
+        checkbox_layout.addWidget(self.parallel_checkbox)
+
         transcribe_layout.addWidget(self.transcribe_button)
 
         status_layout.addWidget(self.status_label)
@@ -104,6 +116,7 @@ class MainWindow(QMainWindow):
         language = None if self.language_combobox.currentText() == "Auto" else self.language_combobox.currentText()
         model = self.model_combobox.currentText()
 
+
         if not path:
             QMessageBox.warning(self, "Błąd", "Wybierz plik video")
             return
@@ -111,12 +124,35 @@ class MainWindow(QMainWindow):
         if not Path(path).exists():
             QMessageBox.warning(self, "Błąd", f"Plik nie istnieje: {path}")
             return
+
+        if not self._is_model_downloaded(model):
+            reply = QMessageBox.question(
+                self, 
+                "Brak modelu",
+                f"Model '{model}' nie jest pobrany. Pobrać go teraz?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.No:
+                return
+            self._start_download_model(model)
+            return
         
+        output = Path(path).parent / "audio" / Path(path).with_suffix(".wav").name
+
+        if output.exists():
+            reply = QMessageBox.question(
+                self, "Plik istnieje",
+                f"Plik '{output.name}' już istnieje. Nadpisać?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.No:
+                return
+
         self.status_label.setText("Trwa transkrypcja...")
 
         
         
-        self.worker = TranscriptionWorker(path, language, model)
+        self.worker = TranscriptionWorker(path, language, model, self.split_checkbox.isChecked(), self.parallel_checkbox.isChecked())
         self._thread = QThread()
 
         self.worker.moveToThread(self._thread)
@@ -146,4 +182,57 @@ class MainWindow(QMainWindow):
     def open_editor(self):
         SegmentEditorWindow(self.last_result, parent = self).show()
 
-        
+    def _is_model_downloaded(self, model: str) -> bool:
+        possible_dirs = [
+            Path.home() / ".cache" / "whisper",
+            Path.home() / ".var" / "app" / "com.visualstudio.code" / "cache" / "whisper",
+        ]
+        for cache_dir in possible_dirs:
+            print(f"Sprawdzam: {cache_dir}, istnieje: {cache_dir.exists()}")
+            if cache_dir.exists():
+                files = list(cache_dir.glob(f"{model}*"))
+                print(f"Znalezione pliki: {files}")
+                if files:
+                    return True
+        return False
+    # def _is_model_downloaded(self, model: str) -> bool:
+    #     possible_dirs = [
+    #         Path.home() / ".cache" / "whisper",
+    #         Path.home() / ".var" / "app" / "com.visualstudio.code" / "cache" / "whisper",
+    #     ]
+    #     for cache_dir in possible_dirs:
+    #         if cache_dir.exists() and list(cache_dir.glob(f"{model}*")):
+    #             return True
+    #     return False
+    
+    def _start_download_model(self, model: str):
+        self.transcribe_button.setEnabled(False)
+        self.status_label.setText(f"Pobieranie modelu '{model}'...")
+
+        self.download_worker =  ModelDownloadWorker(model)
+        self._thread_for_download = QThread()
+
+        self.download_worker.moveToThread(self._thread_for_download)
+
+        self._thread_for_download.started.connect(self.download_worker.run)
+        self.download_worker.progress.connect(self._on_download_progress)
+        self.download_worker.finished.connect(self._on_model_downloaded)
+        self.download_worker.error.connect(self.on_transcription_error)
+        self.download_worker.finished.connect(self._thread_for_download.quit)
+        self.download_worker.finished.connect(self.download_worker.deleteLater)
+        self._thread_for_download.finished.connect(self._thread_for_download.deleteLater)
+
+        self._thread_for_download.start()
+
+    def _on_model_downloaded(self):
+        self.transcribe_button.setEnabled(True)
+        self.status_label.setText("Model pobrany. Możesz transkrybować.")
+    
+    def _on_download_progress(self, percent: int, speed: float):
+        speed_mb = speed / 1024 / 1024
+        self.status_label.setText(f"Pobieranie modelu... {percent}% ({speed_mb:.1f} MB/s)")
+
+    def _on_split_toggled(self, state):
+        self.parallel_checkbox.setEnabled(state == 2)
+        if state != 2:
+            self.parallel_checkbox.setChecked(False)
