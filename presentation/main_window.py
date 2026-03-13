@@ -180,7 +180,9 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, "Błąd", message)
     
     def open_editor(self):
-        SegmentEditorWindow(self.last_result, parent = self).show()
+        if self.last_result is None:
+            return
+        SegmentEditorWindow(self.last_result, self.src_textbox.text(), parent=self).show()
 
     def _is_model_downloaded(self, model: str) -> bool:
         possible_dirs = [
@@ -188,22 +190,11 @@ class MainWindow(QMainWindow):
             Path.home() / ".var" / "app" / "com.visualstudio.code" / "cache" / "whisper",
         ]
         for cache_dir in possible_dirs:
-            print(f"Sprawdzam: {cache_dir}, istnieje: {cache_dir.exists()}")
             if cache_dir.exists():
                 files = list(cache_dir.glob(f"{model}*"))
-                print(f"Znalezione pliki: {files}")
                 if files:
                     return True
         return False
-    # def _is_model_downloaded(self, model: str) -> bool:
-    #     possible_dirs = [
-    #         Path.home() / ".cache" / "whisper",
-    #         Path.home() / ".var" / "app" / "com.visualstudio.code" / "cache" / "whisper",
-    #     ]
-    #     for cache_dir in possible_dirs:
-    #         if cache_dir.exists() and list(cache_dir.glob(f"{model}*")):
-    #             return True
-    #     return False
     
     def _start_download_model(self, model: str):
         self.transcribe_button.setEnabled(False)

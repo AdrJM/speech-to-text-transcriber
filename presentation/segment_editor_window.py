@@ -1,3 +1,5 @@
+
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QDialog,
     QLabel,
@@ -6,12 +8,19 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QWidget,
-    QLineEdit
+    QLineEdit,
+    QMessageBox
 )
 
+from domain.models import TranscriptionResult
+from infrastructure.export.json_exporter import JsonExporter
+
 class SegmentEditorWindow(QDialog):
-    def __init__(self, result, parent = None):
+    """Dialog for viewing and editing transcription segments before export."""
+    def __init__(self, result, source_path: str, parent = None):
         super().__init__(parent)
+        self.transcription_result = result
+        self.source_path = Path(source_path)
 
         layout = QVBoxLayout()
         label_layout = QHBoxLayout()
@@ -31,6 +40,7 @@ class SegmentEditorWindow(QDialog):
         scroll.setWidget(container)
 
         button = QPushButton("Eksportuj")
+        button.clicked.connect(self._export)
 
         layout.addLayout(label_layout)
         layout.addLayout(button_layout)
@@ -42,6 +52,7 @@ class SegmentEditorWindow(QDialog):
         self.setLayout(layout)
 
     def _add_segment_row(self, segment, container_layout):
+        """Adds a single editable row (start, text, end) for a segment."""
         row = QHBoxLayout()
     
         start_field = QLineEdit(str(segment.start))
@@ -54,3 +65,8 @@ class SegmentEditorWindow(QDialog):
     
         container_layout.addLayout(row)
     
+    def _export(self):
+        """Exports transcription result to JSON file next to the source file."""
+        output_path = self.source_path.with_suffix(".json")
+        JsonExporter().export(self.transcription_result, output_path)
+        QMessageBox.information(self, "Eksport", f"Zapisano do {output_path.name}")
