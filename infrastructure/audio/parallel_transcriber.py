@@ -9,6 +9,12 @@ from domain.mappers import map_to_domain
 
 class ParallelTranscriber:
     """
+    Transcribes audio chunks in parallel using a thread pool.
+
+    Each thread gets its own Whisper model instance (via threading.local)
+    to avoid sharing state between threads.
+    Chunks are processed in batches of max_workers to limit memory usage.
+
     On CPU: uses multiple threads — safe because Whisper releases the GIL during inference.
     On GPU (CUDA): parallel threads still work but share the same GPU, so gains are smaller.
         For true GPU parallelism you would need multiple GPUs and separate model instances.
@@ -24,7 +30,7 @@ class ParallelTranscriber:
 
         # Automatically detect device and pick a sensible default for max_workers.
         # On GPU: default to 2 (GPU memory is the bottleneck, not CPU cores).
-        # On CPU: default tp 4
+        # On CPU: default to 4
 
         if max_workers is not None:
             self.max_workers = max_workers
@@ -48,7 +54,7 @@ class ParallelTranscriber:
         results: dict[int, tuple[list[Segment], str]] = {}
         future_to_index: dict = {}
 
-        #divide chunks on batches
+        # Divide chunks into batches of max_workers
         batch_size = self.max_workers
 
         with ThreadPoolExecutor(

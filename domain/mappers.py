@@ -2,6 +2,11 @@ from domain.models import Segment, TranscriptionResult
 
 
 def map_to_domain(result: dict) -> TranscriptionResult:
+        """
+        Maps raw Whisper output dict to domain objects.
+        
+        Raises ValueError if language is missing or not a string.
+        """
         segments = []
 
         for segment in result.get("segments", []):

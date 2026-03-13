@@ -1,9 +1,24 @@
 import subprocess
-from pydub import AudioSegment
 from pathlib import Path
 
 class AudioSplitter:
+    
+    """
+    Splits audio files into fixed-length chunks using ffmpeg.
+    
+    Uses ffmpeg instead of pydub to avoid loading the entire file into RAM,
+    which would cause memory issues with large files.
+    """
+    
     def split(self, file_path: Path, chunk_length_sec: int = 60):
+
+        """
+        Splits audio into chunks of chunk_length_sec seconds.
+        Returns a list of (chunk_path, offset) tuples where offset is the
+        start time of the chunk in seconds relative to the original file.
+        Chunks smaller than 1KB are skipped (empty or corrupted).
+        """
+
         output_path = Path(file_path).parent / "chunks"
         output_path.mkdir(parents = True, exist_ok = True)
 
@@ -29,7 +44,7 @@ class AudioSplitter:
                 "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
                 str(chunk_path)
             ], check = True)
-            if chunk_path.stat().st_size > 1000:  # > 1KB
+            if chunk_path.stat().st_size > 1000:  # skip empty/corrupted chunks
                 chunks.append((chunk_path, offset))
             
             offset += chunk_length_sec

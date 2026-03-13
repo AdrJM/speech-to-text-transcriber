@@ -4,6 +4,17 @@ from domain.models import TranscriptionResult
 from pathlib import Path
 
 class TranscriptionService:
+
+    """
+    Orchestrates the full transcription pipeline:
+    audio extraction → splitting → transcription → reindexing.
+
+    Optional dependencies:
+    - audio_extractor: extracts audio from video files (e.g. mp4 → wav)
+    - audio_splitter: splits long audio into chunks for better performance
+    - parallel_transcriber: transcribes chunks in parallel using multiple threads
+    """
+
     def __init__(self, engine: TranscriptionEngine, audio_splitter = None, audio_extractor = None, parallel_transcriber = None):
         self.engine = engine
         self.audio_splitter = audio_splitter
@@ -11,6 +22,7 @@ class TranscriptionService:
         self.parallel_transcriber = parallel_transcriber
 
     def transcribe_file(self, file_path: Path, language: str = "pl") -> TranscriptionResult:
+        """Runs the full transcription pipeline for a given file."""
         file_path = Path(file_path)
 
         if not file_path:
@@ -30,22 +42,21 @@ class TranscriptionService:
             )
         
     def _prepare_audio(self, file_path: Path) -> Path:
+        """Extracts audio from video if needed. Returns path to wav file."""
         if self.audio_extractor and file_path.suffix != ".wav":
             return self.audio_extractor.extract(file_path)
         
         return file_path
 
     def _get_chunks(self, audio_path: Path):
+        """Splits audio into chunks if splitter is available, otherwise returns the full file as a single chunk."""
         if self.audio_splitter:
             return self.audio_splitter.split(audio_path)
     
         return [(audio_path, 0)]
     
     def _transcribe_chunks(self, chunks, language):
-        print(f"Liczba chunków: {len(chunks)}")
-        for i, (path, offset) in enumerate(chunks):
-            print(f"Przetwarzam chunk {i}: {path}, offset: {offset}")
-        
+        """Transcribes chunks in parallel if parallel_transcriber is set, otherwise sequentially."""      
         if self.parallel_transcriber:
             return self.parallel_transcriber.transcribe_chunks(chunks, language)
         
@@ -68,6 +79,7 @@ class TranscriptionService:
         return all_segments, detected_language or language
 
     def _reindex_segments(self, segments):
+        """Reassigns sequential IDs to all segments after merging chunks."""
         for i, segment in enumerate(segments):
             segment.id = i
         return segments
