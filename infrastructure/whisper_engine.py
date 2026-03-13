@@ -10,7 +10,6 @@ class WhisperEngine:
 
     #Loads Whisper model. Called once in __init__ to avoid reloading on every transcription.
     def _load_model(self):        
-        print(f"Loading Whisper model '{self.model_size}' on '{self.device}'...")
         return whisper.load_model(self.model_size, device=self.device)
     
     def transcribe(self, audio_path: Path, language: str = "pl") -> dict:

@@ -24,6 +24,7 @@ class TranscriptionWorker(QObject):
 
     def run(self):
         try:
+            print(f"Loading Whisper model '{self.model}'...")
             engine = WhisperEngine(model_size = self.model)
             extractor = AudioExtractor()
             splitter = AudioSplitter()
