@@ -45,7 +45,7 @@ class ParallelTranscriber:
         """Called once per thread when executor starts."""
         self._local.engine = WhisperEngine(model_size=self.engine.model_size)
 
-    def transcribe_chunks(self, chunks: list[tuple[Path, float]], language: str = "pl") -> tuple[list[Segment], str]:
+    def transcribe_chunks(self, chunks: list[tuple[Path, float]], language: str = "pl", on_progress = None) -> tuple[list[Segment], str]:
         """
         Transcribes a list of (chunk_path, offset) tuples in parallel.
         Returns (segments, detected_language) — same shape as TranscriptionService._transcribe_chunks.
@@ -71,6 +71,8 @@ class ParallelTranscriber:
                     index = future_to_index[future]
                     try:
                         results[index] = future.result()
+                        if on_progress:
+                            on_progress(len(results), len(chunks))
                     except Exception as e:
                         raise RuntimeError(f"Chunk {index} failed: {e}") from e
                 

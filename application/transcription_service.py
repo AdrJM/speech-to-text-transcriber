@@ -21,7 +21,7 @@ class TranscriptionService:
         self.audio_extractor = audio_extractor
         self.parallel_transcriber = parallel_transcriber
 
-    def transcribe_file(self, file_path: Path, language: str = "pl") -> TranscriptionResult:
+    def transcribe_file(self, file_path: Path, language: str = "pl", on_progress = None) -> TranscriptionResult:
         """Runs the full transcription pipeline for a given file."""
         file_path = Path(file_path)
 
@@ -33,7 +33,7 @@ class TranscriptionService:
         
         audio_path = self._prepare_audio(file_path)
         chunks = self._get_chunks(audio_path)
-        segments, detected_language = self._transcribe_chunks(chunks, language)
+        segments, detected_language = self._transcribe_chunks(chunks, language, on_progress)
         segments = self._reindex_segments(segments)
 
         return TranscriptionResult(
@@ -55,17 +55,20 @@ class TranscriptionService:
     
         return [(audio_path, 0)]
     
-    def _transcribe_chunks(self, chunks, language):
+    def _transcribe_chunks(self, chunks, language, on_progress = None):
         """Transcribes chunks in parallel if parallel_transcriber is set, otherwise sequentially."""      
         if self.parallel_transcriber:
-            return self.parallel_transcriber.transcribe_chunks(chunks, language)
+            return self.parallel_transcriber.transcribe_chunks(chunks, language, on_progress)
         
         all_segments = []
         detected_language = None
         
-        for chunk_path, offset in chunks:
+        for i, (chunk_path, offset) in enumerate(chunks):
             raw_result = self.engine.transcribe(chunk_path, language)
             result = map_to_domain(raw_result)
+
+            if on_progress:
+                on_progress(i + 1, len(chunks))
 
             if detected_language is None:
                 detected_language = result.language

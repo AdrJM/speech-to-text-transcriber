@@ -22,6 +22,7 @@ class TranscriptionWorker(QObject):
 
     finished = pyqtSignal(object)
     error = pyqtSignal(str)
+    progress = pyqtSignal(int, int)
 
     def run(self):
         """Initializes services and runs transcription. Emits finished or error signal."""
@@ -38,7 +39,10 @@ class TranscriptionWorker(QObject):
                 parallel_transcriber = parallel if self.use_parallel else None
                 )
             
-            results = service.transcribe_file(Path(self.audio_path), self.language)
+            results = service.transcribe_file(Path(self.audio_path), self.language, on_progress = self._on_progress)
             self.finished.emit(results)
         except Exception as e:
             self.error.emit(str(e))
+    
+    def _on_progress(self, current: int, total: int):
+        self.progress.emit(current, total)

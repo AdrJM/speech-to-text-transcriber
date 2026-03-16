@@ -148,7 +148,7 @@ class MainWindow(QMainWindow):
             if reply == QMessageBox.StandardButton.No:
                 return
 
-        self.status_label.setText("Trwa transkrypcja...")
+        self.status_label.setText("Tworzę chunki...")
 
         
         
@@ -160,6 +160,7 @@ class MainWindow(QMainWindow):
         self.transcribe_button.setEnabled(False)
 
         self._thread.started.connect(self.worker.run)
+        self.worker.progress.connect(self._on_transcription_progress)
         self.worker.finished.connect(self.on_transcription_finished)
         self.worker.error.connect(self.on_transcription_error)
         self.worker.finished.connect(self._thread.quit)
@@ -227,3 +228,7 @@ class MainWindow(QMainWindow):
         self.parallel_checkbox.setEnabled(state == 2)
         if state != 2:
             self.parallel_checkbox.setChecked(False)
+
+    def _on_transcription_progress(self, current: int, total: int):
+        percent = int(current / total * 100)
+        self.status_label.setText(f"Transkrypcja... {percent}% ({current}/{total} chunków)")
