@@ -9,8 +9,9 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QWidget,
     QLineEdit,
-    QMessageBox
+    QMessageBox,
 )
+from PyQt6.QtGui import QFont
 
 from domain.models import TranscriptionResult
 from infrastructure.export.json_exporter import JsonExporter
@@ -21,6 +22,8 @@ class SegmentEditorWindow(QDialog):
         super().__init__(parent)
         self.transcription_result = result
         self.source_path = Path(source_path)
+        self.setMinimumSize(1200, 400)
+        self.resize(1200, 400)
 
         layout = QVBoxLayout()
         label_layout = QHBoxLayout()
@@ -43,8 +46,8 @@ class SegmentEditorWindow(QDialog):
         button.clicked.connect(self._export)
 
         layout.addLayout(label_layout)
-        layout.addLayout(button_layout)
         layout.addWidget(scroll)
+        layout.addLayout(button_layout)
 
         label_layout.addWidget(label)
         button_layout.addWidget(button)
@@ -53,12 +56,25 @@ class SegmentEditorWindow(QDialog):
 
     def _add_segment_row(self, segment, container_layout):
         """Adds a single editable row (start, text, end) for a segment."""
+        font = QFont()
+        font.setPointSize(11)
+
         row = QHBoxLayout()
     
         start_field = QLineEdit(str(segment.start))
         text_field = QLineEdit(segment.text)
         end_field = QLineEdit(str(segment.end))
     
+        start_field.setFont(font)
+        text_field.setFont(font)
+        end_field.setFont(font)
+
+        start_field.setFixedHeight(30)
+        start_field.setFixedWidth(40)
+        text_field.setFixedHeight(30)
+        end_field.setFixedHeight(30)
+        end_field.setFixedWidth(40)
+
         row.addWidget(start_field)
         row.addWidget(text_field)
         row.addWidget(end_field)
