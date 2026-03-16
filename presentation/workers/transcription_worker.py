@@ -11,6 +11,7 @@ from infrastructure.audio.parallel_transcriber import ParallelTranscriber
 from infrastructure.whisper_engine import WhisperEngine
 
 class TranscriptionWorker(QObject):
+    """Runs the transcription pipeline in a background thread."""
     def __init__(self, audio_path, language, model, use_split, use_parallel):
         super().__init__()
         self.use_split = use_split
@@ -23,6 +24,7 @@ class TranscriptionWorker(QObject):
     error = pyqtSignal(str)
 
     def run(self):
+        """Initializes services and runs transcription. Emits finished or error signal."""
         try:
             print(f"Loading Whisper model '{self.model}'...")
             engine = WhisperEngine(model_size = self.model)

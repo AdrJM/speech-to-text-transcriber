@@ -3,6 +3,7 @@ from tqdm import tqdm
 import whisper
 
 class TqdmSignal(tqdm):
+    """Extends tqdm to emit Qt signals on each progress update."""
     def __init__(self, *args, signal = None, **kwargs):
         self.signal = signal
         super().__init__(*args, **kwargs)
@@ -15,6 +16,7 @@ class TqdmSignal(tqdm):
             self.signal.emit(percent, speed)
 
 class ModelDownloadWorker(QObject):
+    """Downloads a Whisper model in a background thread, emitting download progress."""
     finished = pyqtSignal()
     error = pyqtSignal(str)
     progress = pyqtSignal(int, float)

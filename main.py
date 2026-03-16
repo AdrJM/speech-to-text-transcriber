@@ -11,6 +11,7 @@ from config.settings import MODEL_SIZE
 
 #   CLI
 def main():
+    """CLI entry point — transcribes audio file and saves result as JSON."""
     parser = argparse.ArgumentParser(description = "Speech to Text Application")
     parser.add_argument("audio_path", help = "Path to audio file")
     parser.add_argument("--language", default = "pl", help = "Language code")
@@ -40,6 +41,7 @@ def main():
 
 #   GUI
 def run_gui():
+    """GUI entry point — launches the PyQt6 main window."""
     app = QApplication([])
     window = MainWindow()
     window.show()

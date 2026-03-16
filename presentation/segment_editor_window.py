@@ -70,10 +70,10 @@ class SegmentEditorWindow(QDialog):
         end_field.setFont(font)
 
         start_field.setFixedHeight(30)
-        start_field.setFixedWidth(40)
+        start_field.setFixedWidth(60)
         text_field.setFixedHeight(30)
         end_field.setFixedHeight(30)
-        end_field.setFixedWidth(40)
+        end_field.setFixedWidth(60)
 
         row.addWidget(start_field)
         row.addWidget(text_field)
