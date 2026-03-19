@@ -1,4 +1,4 @@
-from domain.models import Segment, TranscriptionResult
+from domain.models import Segment, TranscriptionResult, Word
 
 
 def map_to_domain(result: dict) -> TranscriptionResult:
@@ -10,12 +10,22 @@ def map_to_domain(result: dict) -> TranscriptionResult:
         segments = []
 
         for segment in result.get("segments", []):
+            words = [
+                 Word(
+                      word = w.get("word", "").strip(),
+                      start = w.get("start", 0.0),
+                      end = w.get("end", 0.0)
+                 )
+                 for w in segment.get("words", [])
+            ]
+
             segments.append(
                 Segment(
                     id = segment.get("id"),
                     start = segment.get("start"),
                     end = segment.get("end"),
-                    text = segment.get("text", "").strip()
+                    text = segment.get("text", "").strip(),
+                    words = words
                 )
             )
 

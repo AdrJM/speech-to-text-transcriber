@@ -23,7 +23,8 @@ class WhisperEngine:
         results = self.model.transcribe(
             str(audio_path),
             language = language,
-            fp16 = torch.cuda.is_available()
+            fp16 = torch.cuda.is_available(),
+            word_timestamps = True
         )
         
         return results

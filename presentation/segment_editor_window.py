@@ -10,11 +10,13 @@ from PyQt6.QtWidgets import (
     QWidget,
     QLineEdit,
     QMessageBox,
+    QComboBox
 )
 from PyQt6.QtGui import QFont
 
 from domain.models import TranscriptionResult
 from infrastructure.export.json_exporter import JsonExporter
+from infrastructure.export.srt_exporter import SrtExporter
 
 class SegmentEditorWindow(QDialog):
     """Dialog for viewing and editing transcription segments before export."""
@@ -42,6 +44,15 @@ class SegmentEditorWindow(QDialog):
 
         scroll.setWidget(container)
 
+        self.format_combobox = QComboBox()
+        self.format_combobox.addItems(["JSON", "SRT"])
+
+        self.srt_mode_combobox = QComboBox()
+        self.srt_mode_combobox.addItems(["Per wyraz", "Per segment"])
+        self.srt_mode_combobox.setVisible(False)
+
+        self.format_combobox.currentTextChanged.connect(self._on_format_changed)
+
         button = QPushButton("Eksportuj")
         button.clicked.connect(self._export)
 
@@ -50,6 +61,8 @@ class SegmentEditorWindow(QDialog):
         layout.addLayout(button_layout)
 
         label_layout.addWidget(label)
+        button_layout.addWidget(self.format_combobox)
+        button_layout.addWidget(self.srt_mode_combobox)
         button_layout.addWidget(button)
 
         self.setLayout(layout)
@@ -82,7 +95,25 @@ class SegmentEditorWindow(QDialog):
         container_layout.addLayout(row)
     
     def _export(self):
+        fmt = self.format_combobox.currentText()
+
+        if fmt == "JSON":
+            self._export_json()
+        else:
+            self._export_srt()
+
+    def _export_json(self):
         """Exports transcription result to JSON file next to the source file."""
         output_path = self.source_path.with_suffix(".json")
         JsonExporter().export(self.transcription_result, output_path)
         QMessageBox.information(self, "Eksport", f"Zapisano do {output_path.name}")
+
+    def _export_srt(self):
+        """ Exports transcription result to SRT file next to the source file."""
+        output_path = self.source_path.with_suffix(".srt")
+        word_level = self.srt_mode_combobox.currentText() == "Per wyraz"
+        SrtExporter().export(self.transcription_result, output_path, word_level = word_level)
+        QMessageBox.information(self, "Eksport", f"Zapisano do {output_path.name}")
+
+    def _on_format_changed(self, fmt: str):
+        self.srt_mode_combobox.setVisible(fmt == "SRT")

@@ -1,6 +1,13 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
+@dataclass
+class Word:
+    """Represents a single transcribed word with timing information."""
+    word: str
+    start: float
+    end: float
+    
 @dataclass
 class Segment:
     """Represents a single transcribed segment with timing information."""
@@ -8,6 +15,7 @@ class Segment:
     start: float    # start time in seconds
     end: float      # end time in seconds
     text: str
+    words: List[Word] = field(default_factory = list)
 
 @dataclass
 class TranscriptionResult:
