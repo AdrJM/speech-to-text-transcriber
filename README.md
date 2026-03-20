@@ -18,14 +18,16 @@ Whisper-based speech-to-text transcription tool with a PyQt6 GUI and structured 
 - Segment editor — view and edit transcribed segments before export
 - JSON export — saves transcription with timestamps to a structured JSON file
 - SRT export — exports subtitles with word-level or segment-level timestamps
+- AMD GPU support via ROCm
 - CLI mode — run transcription directly from the terminal
 
 ---
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.12
 - ffmpeg installed and available in PATH
+- (Optional) AMD GPU with ROCm 6.2+ for GPU acceleration
 
 ---
 
@@ -35,11 +37,22 @@ Whisper-based speech-to-text transcription tool with a PyQt6 GUI and structured 
 git clone https://github.com/AdrJM/speech-to-text-transcriber.git
 cd speech-to-text-transcriber
 
-python -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 pip install -r requirements.txt
 ```
+
+### AMD GPU (ROCm) support
+
+If you have an AMD GPU, install PyTorch with ROCm **before** installing requirements:
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6.2
+pip install -r requirements.txt --ignore-installed torch torchvision
+```
+
+Verified working on: RX 7800 XT, ROCm 6.2.3, Linux Mint 21.3
 
 ---
 
@@ -99,9 +112,8 @@ Models are downloaded automatically on first use.
 
 ## Roadmap
 
-- [ ] Highlight detection - automatically find the most interesting moments in the video
-- [ ] DaVinci Resolve plugin — auto-montage shorts/tiktoks based on highlights (separate project)
-- [ ] AMD GPU support (ROCm)
+- [ ] Highlight detection — automatically find the most interesting moments in the video
+- [ ] DaVinci Resolve plugin — auto-montage shorts/TikToks based on highlights (separate project)
 - [ ] Add more language options to GUI
 - [ ] Save edited segments from editor back to result
 - [ ] Transcription progress for non-chunked files
