@@ -29,7 +29,7 @@ class ParallelTranscriber:
         self._local = threading.local()
 
         # Automatically detect device and pick a sensible default for max_workers.
-        # On GPU: default to 2 (GPU memory is the bottleneck, not CPU cores).
+        # On GPU: default to 1 (GPU memory is the bottleneck, not CPU cores).
         # On CPU: default to 4
 
         if max_workers is not None:
@@ -100,6 +100,7 @@ class ParallelTranscriber:
         """Transcribes one chunk and applies the time offset to all segments."""
         engine = self._get_engine()
         raw_result = engine.transcribe(chunk_path, language)
+        torch.cuda.empty_cache() 
         result = map_to_domain(raw_result)
 
         for segment in result.segments:

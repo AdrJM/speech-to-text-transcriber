@@ -9,8 +9,10 @@ class AudioSplitter:
     Uses ffmpeg instead of pydub to avoid loading the entire file into RAM,
     which would cause memory issues with large files.
     """
-    
-    def split(self, file_path: Path, chunk_length_sec: int = 60):
+    def __init__(self, chunk_length_sec: int = 300):
+        self.chunk_length_sec = chunk_length_sec
+
+    def split(self, file_path: Path, chunk_length_sec: int = 300):
 
         """
         Splits audio into chunks of chunk_length_sec seconds.
@@ -51,3 +53,22 @@ class AudioSplitter:
             index += 1
             
         return chunks
+
+    def split_single(self, file_path: Path, offset: float, index: int) -> list[tuple[Path, float]]:
+        """Creates a single chunk at given offset."""
+        output_path = Path(file_path).parent / "chunks"
+        output_path.mkdir(parents=True, exist_ok=True)
+        chunk_path = output_path / f"chunk_{index}.wav"
+
+        subprocess.run([
+            "ffmpeg", "-y",
+            "-i", str(file_path),
+            "-ss", str(offset),
+            "-t", str(self.chunk_length_sec),
+            "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+            str(chunk_path)
+        ], check=True)
+
+        if chunk_path.stat().st_size > 1000:
+            return [(chunk_path, offset)]
+        return []

@@ -2,6 +2,7 @@ from interfaces.engines import TranscriptionEngine
 from domain.mappers import map_to_domain
 from domain.models import TranscriptionResult
 from pathlib import Path
+import subprocess
 
 class TranscriptionService:
 
@@ -32,14 +33,62 @@ class TranscriptionService:
             raise FileNotFoundError(file_path)
         
         audio_path = self._prepare_audio(file_path)
-        chunks = self._get_chunks(audio_path)
-        segments, detected_language = self._transcribe_chunks(chunks, language, on_progress)
+
+        if self.audio_splitter:
+            segments, detected_language = self._transcribe_with_splitter(audio_path, language, on_progress)
+        else:
+            chunks = [(audio_path, 0)]
+            segments, detected_language = self._transcribe_chunks(chunks, language, on_progress)
+
         segments = self._reindex_segments(segments)
 
         return TranscriptionResult(
             language = detected_language,
             segments = segments
             )
+    def _transcribe_with_splitter(self, audio_path: Path, language: str, on_progress=None):
+        """Creates and transcribes one chunk at a time to minimize memory usage."""
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)],
+            capture_output=True, text=True, check=True
+        )
+        duration = float(result.stdout.strip())
+        chunk_length_sec = self.audio_splitter.chunk_length_sec
+        total_chunks = int(duration / chunk_length_sec) + 1
+
+        all_segments = []
+        detected_language = None
+        index = 0
+        offset = 0
+
+        while offset < duration:
+            # Create single chunk
+            chunks = self.audio_splitter.split_single(audio_path, offset, index)
+            
+            for chunk_path, chunk_offset in chunks:
+                raw_result = self.engine.transcribe(chunk_path, language)
+                result_domain = map_to_domain(raw_result)
+
+                if detected_language is None:
+                    detected_language = result_domain.language
+
+                for segment in result_domain.segments:
+                    segment.start += chunk_offset
+                    segment.end += chunk_offset
+
+                all_segments.extend(result_domain.segments)
+
+                if chunk_path.exists():
+                    chunk_path.unlink()
+
+                if on_progress:
+                    on_progress(index + 1, total_chunks)
+
+            offset += chunk_length_sec
+            index += 1
+
+        return all_segments, detected_language or language
         
     def _prepare_audio(self, file_path: Path) -> Path:
         """Extracts audio from video if needed. Returns path to wav file."""
@@ -56,7 +105,7 @@ class TranscriptionService:
         return [(audio_path, 0)]
     
     def _transcribe_chunks(self, chunks, language, on_progress = None):
-        """Transcribes chunks in parallel if parallel_transcriber is set, otherwise sequentially."""      
+        """Transcribes chunks sequentially, deleting each after transcription to save memory."""   
         if self.parallel_transcriber:
             return self.parallel_transcriber.transcribe_chunks(chunks, language, on_progress)
         
@@ -78,6 +127,9 @@ class TranscriptionService:
                 segment.end += offset
             
             all_segments.extend(result.segments)
+
+            if chunk_path.exists():
+                chunk_path.unlink()
         
         return all_segments, detected_language or language
 

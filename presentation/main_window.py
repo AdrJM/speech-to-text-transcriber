@@ -148,8 +148,6 @@ class MainWindow(QMainWindow):
             if reply == QMessageBox.StandardButton.No:
                 return
 
-        self.status_label.setText("Tworzę chunki...")
-
         
         
         self.worker = TranscriptionWorker(path, language, model, self.split_checkbox.isChecked(), self.parallel_checkbox.isChecked())
@@ -160,6 +158,7 @@ class MainWindow(QMainWindow):
         self.transcribe_button.setEnabled(False)
 
         self._thread.started.connect(self.worker.run)
+        self.worker.status.connect(self.status_label.setText)
         self.worker.progress.connect(self._on_transcription_progress)
         self.worker.finished.connect(self.on_transcription_finished)
         self.worker.error.connect(self.on_transcription_error)

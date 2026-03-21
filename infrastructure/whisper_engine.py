@@ -1,6 +1,7 @@
 import whisper
 import torch
 from pathlib import Path
+import gc
 
 class WhisperEngine:
     """
@@ -26,5 +27,7 @@ class WhisperEngine:
             fp16 = torch.cuda.is_available(),
             word_timestamps = True
         )
+        torch.cuda.empty_cache()
+        gc.collect()
         
         return results

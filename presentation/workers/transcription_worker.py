@@ -23,12 +23,15 @@ class TranscriptionWorker(QObject):
     finished = pyqtSignal(object)
     error = pyqtSignal(str)
     progress = pyqtSignal(int, int)
+    status = pyqtSignal(str)
 
     def run(self):
         """Initializes services and runs transcription. Emits finished or error signal."""
         try:
-            print(f"Loading Whisper model '{self.model}'...")
+            self.status.emit("Ładowanie modelu...")
             engine = WhisperEngine(model_size = self.model)
+
+            self.status.emit("Tworzenie chunków...")
             extractor = AudioExtractor()
             splitter = AudioSplitter()
             parallel = ParallelTranscriber(engine)
