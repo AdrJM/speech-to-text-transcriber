@@ -12,13 +12,13 @@ Whisper-based speech-to-text transcription tool with a PyQt6 GUI and structured 
 - PyQt6 GUI with real-time status updates
 - Video support — extracts audio from MP4, MKV, AVI automatically via ffmpeg
 - Audio splitting — splits long files into chunks to reduce memory usage
-- Parallel transcription — transcribes chunks simultaneously using multiple threads
+- Parallel transcription — transcribes chunks simultaneously using multiple threads (CPU) or sequential processing (GPU)
 - Download progress — shows % and MB/s when downloading Whisper models
 - Transcription progress — shows how many chunks have been processed
 - Segment editor — view and edit transcribed segments before export
 - JSON export — saves transcription with timestamps to a structured JSON file
 - SRT export — exports subtitles with word-level or segment-level timestamps
-- AMD GPU support via ROCm
+- GPU support — AMD (ROCm) and NVIDIA (CUDA)
 - CLI mode — run transcription directly from the terminal
 
 ---
@@ -27,7 +27,7 @@ Whisper-based speech-to-text transcription tool with a PyQt6 GUI and structured 
 
 - Python 3.12
 - ffmpeg installed and available in PATH
-- (Optional) AMD GPU with ROCm 6.2+ for GPU acceleration
+- (Optional) GPU for acceleration — AMD via ROCm 6.2+ or NVIDIA via CUDA
 
 ---
 
@@ -43,16 +43,31 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### AMD GPU (ROCm) support
+### AMD GPU (ROCm)
 
-If you have an AMD GPU, install PyTorch with ROCm **before** installing requirements:
+Install PyTorch with ROCm **before** installing requirements:
 
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6.2
 pip install -r requirements.txt --ignore-installed torch torchvision
 ```
 
+Also add to `~/.bashrc`:
+
+```bash
+export HSA_OVERRIDE_GFX_VERSION=11.0.0
+```
+
 Verified working on: RX 7800 XT, ROCm 6.2.3, Linux Mint 21.3
+
+### NVIDIA GPU (CUDA)
+
+Install PyTorch with CUDA **before** installing requirements:
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+pip install -r requirements.txt --ignore-installed torch torchvision
+```
 
 ---
 

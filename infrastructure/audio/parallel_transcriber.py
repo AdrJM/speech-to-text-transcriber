@@ -35,7 +35,9 @@ class ParallelTranscriber:
         if max_workers is not None:
             self.max_workers = max_workers
         elif torch.cuda.is_available():
-            self.max_workers = 2
+             # GPU (AMD ROCm or NVIDIA CUDA) — sequential is optimal,
+            # GPU handles parallelism internally
+            self.max_workers = 1
         else:
             self.max_workers = 4
 
