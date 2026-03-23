@@ -1,6 +1,7 @@
 from pathlib import Path
-from PyQt6.QtCore import QThread
+from PyQt6.QtCore import QThread, Qt, QPoint
 from PyQt6.QtWidgets import (
+    QApplication,
     QMainWindow,
     QWidget,
     QLabel,
@@ -11,24 +12,30 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QComboBox,
     QMessageBox,
-    QCheckBox
+    QCheckBox,
 )
-
+from presentation.base_window import TitleBarMixin
+from presentation.style import DARK, LIGHT, build_stylesheet, build_title_bar_button_style
 from presentation.workers.model_download_worker import ModelDownloadWorker
 from presentation.segment_editor_window import SegmentEditorWindow
 from presentation.workers.transcription_worker import TranscriptionWorker
 
-class MainWindow(QMainWindow):
+
+class MainWindow(QMainWindow, TitleBarMixin):
     def __init__(self):
         super().__init__()
+        self.setFixedSize(400, 300)
+        self.current_theme = DARK
+        self._title_bar_buttons = []  
+        self.init_title_bar()
+        self.apply_frameless()
+
         self.worker = None
         self._thread = None
         self.last_result = None
         self.editor_window = None
 
         layout = QVBoxLayout()
-
-        label = QLabel("Speech To Text")
 
         src_layout = QHBoxLayout()
         self.src_textbox = QLineEdit()
@@ -68,14 +75,18 @@ class MainWindow(QMainWindow):
         self.edit_button.setVisible(False)
         self.edit_button.clicked.connect(self.open_editor)
 
-
-        layout.addWidget(label)
+        footer = QLabel("Powered by Whisper AI")
+        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer.setStyleSheet("color: #555555; font-size: 10px; padding: 4px;")
+        
         layout.addLayout(src_layout)
         layout.addLayout(whisper_options_layout)
         layout.addLayout(transcribe_layout)
         layout.addLayout(status_layout)
         layout.addLayout(edit_layout)
         layout.addLayout(checkbox_layout)
+        layout.addWidget(footer)
+        layout.addStretch()
 
         whisper_options_layout.addLayout(language_layout)
         whisper_options_layout.addLayout(model_layout)
@@ -98,9 +109,18 @@ class MainWindow(QMainWindow):
 
         edit_layout.addWidget(self.edit_button)
 
+        content = QWidget()
+        content.setLayout(layout)
+
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        main_layout.addWidget(self.build_title_bar("SPEECH TO TEXT", show_max=False, on_theme_toggle=self._toggle_theme, theme=self.current_theme))
+        main_layout.addWidget(content)
+
         self.widget = QWidget()
-        self.setCentralWidget(self.widget) 
-        self.widget.setLayout(layout)
+        self.setCentralWidget(self.widget)
+        self.widget.setLayout(main_layout)
         
     def browse_file(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -182,7 +202,10 @@ class MainWindow(QMainWindow):
     def open_editor(self):
         if self.last_result is None:
             return
-        SegmentEditorWindow(self.last_result, self.src_textbox.text(), parent=self).show()
+        SegmentEditorWindow(
+            self.last_result, 
+            self.src_textbox.text(), 
+            parent=self).show()
 
     def _is_model_downloaded(self, model: str) -> bool:
         possible_dirs = [
@@ -231,3 +254,13 @@ class MainWindow(QMainWindow):
     def _on_transcription_progress(self, current: int, total: int):
         percent = int(current / total * 100)
         self.status_label.setText(f"Transkrypcja... {percent}% ({current}/{total} chunków)")
+
+    def _toggle_theme(self):
+        self.current_theme = LIGHT if self.current_theme == DARK else DARK
+        icon = "☀" if self.current_theme == DARK else "🌙"
+        self.sender().setText(icon) # type: ignore
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            app.setStyleSheet(build_stylesheet(self.current_theme))
+        for btn in self._title_bar_btns:
+            btn.setStyleSheet(build_title_bar_button_style(self.current_theme))

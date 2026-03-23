@@ -19,6 +19,20 @@ DARK = {
     "input_border": "#ffffff",
     "disabled": "#555555",
 }
+def build_title_bar_button_style(colors: dict) -> str:
+    return f"""
+        QPushButton {{
+            background-color: transparent;
+            color: {colors['text']};
+            border: none;
+            font-size: 20px;
+            font-family: 'Courier New', monospace;
+        }}
+        QPushButton:hover {{
+            background-color: {colors['border']};
+            color: {colors['bg']};
+        }}
+    """
 
 def build_stylesheet(colors: dict) -> str:
     return f"""

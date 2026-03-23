@@ -3,6 +3,7 @@ import argparse
 import sys
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import Qt
 from presentation.main_window import MainWindow
 from infrastructure.whisper_engine import WhisperEngine
 from application.transcription_service import TranscriptionService

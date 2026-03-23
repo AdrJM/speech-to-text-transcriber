@@ -18,11 +18,15 @@ from domain.models import Segment
 from domain.models import TranscriptionResult
 from infrastructure.export.json_exporter import JsonExporter
 from infrastructure.export.srt_exporter import SrtExporter
+from presentation.base_window import TitleBarMixin
 
-class SegmentEditorWindow(QDialog):
+class SegmentEditorWindow(QDialog, TitleBarMixin):
     """Dialog for viewing and editing transcription segments before export."""
     def __init__(self, result, source_path: str, parent = None):
         super().__init__(parent)
+        self.init_title_bar()
+        self.apply_frameless(dialog = True)
+
         self.transcription_result = result
         self.source_path = Path(source_path)
         self.setMinimumSize(1200, 400)
@@ -59,6 +63,7 @@ class SegmentEditorWindow(QDialog):
         button.clicked.connect(self._export)
         button.setFixedWidth(120)
 
+        layout.addWidget(self.build_title_bar("EDYTOR SEGMENTÓW"))
         layout.addLayout(label_layout)
         layout.addWidget(scroll)
         layout.addLayout(button_layout)
