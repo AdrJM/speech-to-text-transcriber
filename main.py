@@ -8,6 +8,7 @@ from infrastructure.whisper_engine import WhisperEngine
 from application.transcription_service import TranscriptionService
 from infrastructure.export.json_exporter import JsonExporter
 from config.settings import MODEL_SIZE
+from presentation.style import DARK, build_stylesheet
 
 #   CLI
 def main():
@@ -41,8 +42,8 @@ def main():
 
 #   GUI
 def run_gui():
-    """GUI entry point — launches the PyQt6 main window."""
     app = QApplication([])
+    app.setStyleSheet(build_stylesheet(DARK))
     window = MainWindow()
     window.show()
     app.exec()

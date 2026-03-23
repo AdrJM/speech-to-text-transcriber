@@ -57,6 +57,7 @@ class SegmentEditorWindow(QDialog):
 
         button = QPushButton("Eksportuj")
         button.clicked.connect(self._export)
+        button.setFixedWidth(120)
 
         layout.addLayout(label_layout)
         layout.addWidget(scroll)
