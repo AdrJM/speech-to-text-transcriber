@@ -1,23 +1,21 @@
 # Speech-to-Text Transcriber
 
-> **Work in progress** — the project is under active development. Some features may be incomplete or change without notice.
-
-Whisper-based speech-to-text transcription tool with a PyQt6 GUI and structured JSON output.
+Whisper-based speech-to-text transcription tool with a PyQt6 GUI and structured JSON/SRT output.
 
 ---
 
 ## Features
 
 - Transcription powered by [OpenAI Whisper](https://github.com/openai/whisper)
-- PyQt6 GUI with real-time status updates
+- Custom PyQt6 GUI with dark/light theme toggle
 - Video support — extracts audio from MP4, MKV, AVI automatically via ffmpeg
 - Audio splitting — splits long files into chunks to reduce memory usage
-- Parallel transcription — transcribes chunks simultaneously using multiple threads (CPU) or sequential processing (GPU)
+- Parallel transcription — multiple threads on CPU, sequential on GPU
 - Download progress — shows % and MB/s when downloading Whisper models
 - Transcription progress — shows how many chunks have been processed
 - Segment editor — view and edit transcribed segments before export
-- JSON export — saves transcription with timestamps to a structured JSON file
-- SRT export — exports subtitles with word-level or segment-level timestamps
+- JSON export — saves transcription with timestamps
+- SRT export — word-level or segment-level subtitles
 - GPU support — AMD (ROCm) and NVIDIA (CUDA)
 - CLI mode — run transcription directly from the terminal
 
@@ -27,7 +25,7 @@ Whisper-based speech-to-text transcription tool with a PyQt6 GUI and structured 
 
 - Python 3.12
 - ffmpeg installed and available in PATH
-- (Optional) GPU for acceleration — AMD via ROCm 6.2+ or NVIDIA via CUDA
+- (Optional) GPU — AMD via ROCm 6.2+ or NVIDIA via CUDA
 
 ---
 
@@ -52,7 +50,7 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6
 pip install -r requirements.txt --ignore-installed torch torchvision
 ```
 
-Also add to `~/.bashrc`:
+Add to `~/.bashrc`:
 
 ```bash
 export HSA_OVERRIDE_GFX_VERSION=11.0.0
@@ -102,9 +100,9 @@ LANGUAGE=pl
 application/        # transcription service (business logic)
 config/             # settings and environment variables
 domain/             # data models and mappers
-infrastructure/     # Whisper engine, audio extractor, splitter, parallel transcriber, JSON/SRT exporter
+infrastructure/     # Whisper engine, audio extractor, splitter, parallel transcriber, exporters
 interfaces/         # protocols (TranscriptionEngine, TranscriptionExporter)
-presentation/       # PyQt6 GUI (main window, segment editor, workers)
+presentation/       # PyQt6 GUI (main window, segment editor, workers, style)
 tests/              # pytest tests
 main.py             # CLI and GUI entry point
 ```
@@ -129,8 +127,7 @@ Models are downloaded automatically on first use.
 
 - [ ] Highlight detection — automatically find the most interesting moments in the video
 - [ ] DaVinci Resolve plugin — auto-montage shorts/TikToks based on highlights (separate project)
-- [ ] Add more language options to GUI
-- [ ] Save edited segments from editor back to result
+- [ ] Add more language options to GUI 
 - [ ] Transcription progress for non-chunked files
 
 ---
