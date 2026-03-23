@@ -1,10 +1,11 @@
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 from application.transcription_service import TranscriptionService
 from domain.models import TranscriptionResult
 
 class DummyEngine:
+    model_size = "tiny"
     def transcribe(self, audio_path, language):
         return {
             "language": language,
@@ -37,6 +38,7 @@ def test_segment_id_is_reindexed(service, audio):
 
 def test_chunks_offset(tmp_path):
     class DummyEngineWithSegment:
+        model_size = "tiny"
         def transcribe(self, audio_path, language):
             return {
                 "language": language,
@@ -54,9 +56,14 @@ def test_chunks_offset(tmp_path):
     chunk2.write_bytes(b"fake")
 
     mock_splitter = MagicMock()
-    mock_splitter.split.return_value = [(chunk1, 0), (chunk2, 60)]
-    
-    service = TranscriptionService(DummyEngineWithSegment(), mock_splitter)
-    transcribe = service.transcribe_file(audio, "pl")
+    mock_splitter.chunk_length_sec = 60
+    mock_splitter.split_single.side_effect = [
+        [(chunk1, 0)],
+        [(chunk2, 60)]
+    ]
+    with patch("application.transcription_service.subprocess.run") as mock_run:
+        mock_run.return_value.stdout = "120\n"  # 2 minuty = 2 chunki po 60s
+        service = TranscriptionService(DummyEngineWithSegment(), mock_splitter)
+        transcribe = service.transcribe_file(audio, "pl")
     
     assert transcribe.segments[1].start == 60.0

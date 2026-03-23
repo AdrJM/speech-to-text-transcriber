@@ -1,11 +1,10 @@
-from pathlib import Path
-
+from unittest.mock import patch
 import pytest
-from domain.models import Segment
 from infrastructure.audio.parallel_transcriber import ParallelTranscriber
 
 
 class DummyEngine:
+    model_size = "tiny"
     def transcribe(self, audio_path, language):
         return {
             "language": language,
@@ -13,6 +12,7 @@ class DummyEngine:
         }
 
 class DummyEngineWithSegment:
+        model_size = "tiny"
         def transcribe(self, audio_path, language):
             return {
                 "language": language,
@@ -34,8 +34,10 @@ def create_chunks(tmp_path):
 def test_transcribe_chunks_returns_correct_type(create_chunks):
     chunk1, chunk2 = create_chunks
     chunks = [(chunk1, 0.0), (chunk2, 60.0)]
-    parallel = ParallelTranscriber(DummyEngine(), max_workers = 2)
-    result = parallel.transcribe_chunks(chunks)
+    parallel = ParallelTranscriber(DummyEngine(), max_workers=2)
+    
+    with patch.object(parallel, '_init_worker', lambda: setattr(parallel._local, 'engine', DummyEngine())):
+        result = parallel.transcribe_chunks(chunks)
 
     segments, language = result
     assert isinstance(segments, list)
@@ -44,14 +46,17 @@ def test_transcribe_chunks_returns_correct_type(create_chunks):
 def test_transcribe_chunks_returns_segments_in_correct_order_with_offset(create_chunks):
     chunk1, chunk2 = create_chunks
     chunks = [(chunk1, 0.0), (chunk2, 60.0)]
-    parallel = ParallelTranscriber(DummyEngineWithSegment(), max_workers = 2)
-    segments, language = parallel.transcribe_chunks(chunks)
+    parallel = ParallelTranscriber(DummyEngineWithSegment(), max_workers=2)
+
+    with patch.object(parallel, '_init_worker', lambda: setattr(parallel._local, 'engine', DummyEngineWithSegment())):
+        segments, language = parallel.transcribe_chunks(chunks)
 
     assert segments[0].start == 0.0    
     assert segments[1].start == 60.0
 
 def test_transcribe_chunks_raises_on_engine_error(create_chunks):
     class DummyEngineThatFails:
+        model_size = "tiny"
         def transcribe(self, audio_path, language):
             raise ValueError("Transcription failed")
         
