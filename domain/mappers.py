@@ -1,5 +1,5 @@
 from domain.models import Segment, TranscriptionResult, Word
-
+from domain.hallucination_filter import is_hallucination 
 
 def map_to_domain(result: dict) -> TranscriptionResult:
         """
@@ -10,6 +10,12 @@ def map_to_domain(result: dict) -> TranscriptionResult:
         segments = []
 
         for segment in result.get("segments", []):
+            text = segment.get("text", "").strip()
+
+            if is_hallucination(text):  
+                continue
+
+
             words = [
                  Word(
                       word = w.get("word", "").strip(),

@@ -54,7 +54,7 @@ class SegmentEditorWindow(QDialog, TitleBarMixin):
         self.format_combobox.addItems(["JSON", "SRT"])
 
         self.srt_mode_combobox = QComboBox()
-        self.srt_mode_combobox.addItems(["Per wyraz", "Per segment"])
+        self.srt_mode_combobox.addItems(["Krótko", "Długo"])
         self.srt_mode_combobox.setVisible(False)
 
         self.format_combobox.currentTextChanged.connect(self._on_format_changed)
@@ -108,18 +108,21 @@ class SegmentEditorWindow(QDialog, TitleBarMixin):
 
         if fmt == "JSON":
             self._export_json()
-        else:
+        elif fmt == "SRT":
             self._export_srt()
 
     def _get_current_result(self) -> TranscriptionResult:
         """Reads current values from editor fields and returns updated TranscriptionResult."""
         segments = []
+        original_segments = self.transcription_result.segments
         for i, (start_field, text_field, end_field) in enumerate(self.segment_rows):
+            original_words = original_segments[i].words if i < len(original_segments) else []
             segments.append(Segment(
                 id=i,
                 start=float(start_field.text()),
                 end=float(end_field.text()),
-                text=text_field.text()
+                text=text_field.text(),
+                words=original_words 
             ))
         return TranscriptionResult(
             language=self.transcription_result.language,
@@ -135,7 +138,7 @@ class SegmentEditorWindow(QDialog, TitleBarMixin):
     def _export_srt(self):
         """ Exports transcription result to SRT file next to the source file."""
         output_path = self.source_path.with_suffix(".srt")
-        word_level = self.srt_mode_combobox.currentText() == "Per wyraz"
+        word_level = self.srt_mode_combobox.currentText() == "Krótko"
         SrtExporter().export(self._get_current_result(), output_path, word_level = word_level)
         QMessageBox.information(self, "Eksport", f"Zapisano do {output_path.name}")
 
