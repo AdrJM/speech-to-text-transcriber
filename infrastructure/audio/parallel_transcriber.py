@@ -1,5 +1,4 @@
 import threading
-import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from interfaces.engines import TranscriptionEngine
@@ -15,9 +14,11 @@ class ParallelTranscriber:
     to avoid sharing state between threads.
     Chunks are processed in batches of max_workers to limit memory usage.
 
-    On CPU: uses multiple threads — safe because Whisper releases the GIL during inference.
-    On GPU (CUDA): parallel threads still work but share the same GPU, so gains are smaller.
-        For true GPU parallelism you would need multiple GPUs and separate model instances.
+    On CPU: uses multiple threads — safe because faster-whisper releases
+    the GIL during inference.
+
+    Future: when GPU support is added, default max_workers should drop to 1
+    since GPU handles parallelism internally.
 
     Usage:
         transcriber = ParallelTranscriber(engine, max_workers=4)
@@ -25,44 +26,27 @@ class ParallelTranscriber:
     """
 
     def __init__(self, engine: TranscriptionEngine, max_workers: int | None = None):
-        self.engine = engine 
+        self.engine = engine
         self._local = threading.local()
-
-        # Automatically detect device and pick a sensible default for max_workers.
-        # On GPU: default to 1 (GPU memory is the bottleneck, not CPU cores).
-        # On CPU: default to 4
-
-        if max_workers is not None:
-            self.max_workers = max_workers
-        elif torch.cuda.is_available():
-             # GPU (AMD ROCm or NVIDIA CUDA) — sequential is optimal,
-            # GPU handles parallelism internally
-            self.max_workers = 1
-        else:
-            self.max_workers = 4
-
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.max_workers = max_workers if max_workers is not None else 4
 
     def _init_worker(self):
         """Called once per thread when executor starts."""
         self._local.engine = WhisperEngine(model_size=self.engine.model_size)
 
-    def transcribe_chunks(self, chunks: list[tuple[Path, float]], language: str = "pl", on_progress = None) -> tuple[list[Segment], str]:
+    def transcribe_chunks(self, chunks: list[tuple[Path, float]], language: str = "pl", on_progress=None) -> tuple[list[Segment], str]:
         """
         Transcribes a list of (chunk_path, offset) tuples in parallel.
-        Returns (segments, detected_language) — same shape as TranscriptionService._transcribe_chunks.
+        Returns (segments, detected_language).
         """
-        
         results: dict[int, tuple[list[Segment], str]] = {}
         future_to_index: dict = {}
-
-        # Divide chunks into batches of max_workers
         batch_size = self.max_workers
 
         with ThreadPoolExecutor(
-            max_workers = self.max_workers,
-            initializer = self._init_worker
-            ) as executor:
+            max_workers=self.max_workers,
+            initializer=self._init_worker
+        ) as executor:
             for batch_start in range(0, len(chunks), batch_size):
                 batch = chunks[batch_start:batch_start + batch_size]
                 future_to_index = {
@@ -77,8 +61,7 @@ class ParallelTranscriber:
                             on_progress(len(results), len(chunks))
                     except Exception as e:
                         raise RuntimeError(f"Chunk {index} failed: {e}") from e
-                
-        # Reassemble in original order
+
         all_segments = []
         detected_language = None
 
@@ -91,16 +74,15 @@ class ParallelTranscriber:
         return all_segments, detected_language or language
 
     def _get_engine(self):
-        """Returns the engine instance for the current thread, creating it if it does not exist."""
+        """Returns the engine instance for the current thread, creating it if needed."""
         if not hasattr(self._local, "engine"):
-            self._local.engine = WhisperEngine(model_size = self.engine.model_size)
+            self._local.engine = WhisperEngine(model_size=self.engine.model_size)
         return self._local.engine
-    
+
     def _transcribe_single(self, chunk_path: Path, offset: float, language: str) -> tuple[list[Segment], str]:
         """Transcribes one chunk and applies the time offset to all segments."""
         engine = self._get_engine()
         raw_result = engine.transcribe(chunk_path, language)
-        torch.cuda.empty_cache() 
         result = map_to_domain(raw_result)
 
         for segment in result.segments:
@@ -108,4 +90,3 @@ class ParallelTranscriber:
             segment.end += offset
 
         return result.segments, result.language
-    

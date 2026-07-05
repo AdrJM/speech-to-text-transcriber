@@ -13,3 +13,7 @@ venv/
 *.mkv
 
 output/
+
+build/
+dist/
+main.spec

@@ -1,25 +1,18 @@
 from PyQt6.QtCore import QObject, pyqtSignal
-from tqdm import tqdm
-import whisper
-
-class TqdmSignal(tqdm):
-    """Extends tqdm to emit Qt signals on each progress update."""
-    def __init__(self, *args, signal = None, **kwargs):
-        self.signal = signal
-        super().__init__(*args, **kwargs)
-
-    def update(self, n = 1):
-        super().update(n)
-        if self.signal and self.total:
-            percent = int(self.n / self.total * 100)
-            speed = self.format_dict.get("rate", 0) or 0
-            self.signal.emit(percent, speed)
+from infrastructure.whisper_engine import WhisperEngine
 
 class ModelDownloadWorker(QObject):
-    """Downloads a Whisper model in a background thread, emitting download progress."""
+    """
+    Loads/downloads a Whisper model in a background thread.
+    
+    faster-whisper downloads models automatically via Hugging Face Hub
+    on first use — no manual download step needed.
+    Download progress is handled internally by Hugging Face Hub
+    and shown in the terminal.
+    """
     finished = pyqtSignal()
     error = pyqtSignal(str)
-    progress = pyqtSignal(int, float)
+    progress = pyqtSignal(int, float)  # zachowane dla kompatybilności z GUI
 
     def __init__(self, model: str):
         super().__init__()
@@ -27,12 +20,7 @@ class ModelDownloadWorker(QObject):
 
     def run(self):
         try:
-            original_tqdm = getattr(whisper, "tqdm")
-            setattr(whisper, "tqdm", lambda *a, **kw: TqdmSignal(*a, signal = self.progress, **kw))
-
-            whisper.load_model(self.model)
-
-            setattr(whisper, "tqdm", original_tqdm)
+            WhisperEngine(model_size=self.model)
             self.finished.emit()
         except Exception as e:
             self.error.emit(str(e))

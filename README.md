@@ -6,17 +6,15 @@ Whisper-based speech-to-text transcription tool with a PyQt6 GUI and structured 
 
 ## Features
 
-- Transcription powered by [OpenAI Whisper](https://github.com/openai/whisper)
+- Transcription powered by [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (CTranslate2 backend)
 - Custom PyQt6 GUI with dark/light theme toggle
 - Video support — extracts audio from MP4, MKV, AVI automatically via ffmpeg
 - Audio splitting — splits long files into chunks to reduce memory usage
-- Parallel transcription — multiple threads on CPU, sequential on GPU
-- Download progress — shows % and MB/s when downloading Whisper models
+- Parallel transcription — multiple threads on CPU
 - Transcription progress — shows how many chunks have been processed
 - Segment editor — view and edit transcribed segments before export
 - JSON export — saves transcription with timestamps
 - SRT export — word-level or segment-level subtitles
-- GPU support — AMD (ROCm) and NVIDIA (CUDA)
 - CLI mode — run transcription directly from the terminal
 
 ---
@@ -25,7 +23,6 @@ Whisper-based speech-to-text transcription tool with a PyQt6 GUI and structured 
 
 - Python 3.12
 - ffmpeg installed and available in PATH
-- (Optional) GPU — AMD via ROCm 6.2+ or NVIDIA via CUDA
 
 ---
 
@@ -41,30 +38,19 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### AMD GPU (ROCm)
+### Hugging Face Token (recommended)
 
-Install PyTorch with ROCm **before** installing requirements:
+Whisper models are downloaded automatically from Hugging Face Hub on first use.
+Without a token, downloads still work but with lower rate limits.
 
-```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6.2
-pip install -r requirements.txt --ignore-installed torch torchvision
-```
+To get a token:
+1. Create a free account at [huggingface.co](https://huggingface.co)
+2. Go to **Settings → Access Tokens → New Token**
+3. Select type `read` and enable **Read access to contents of all public gated repos you can access**
+4. Copy the token and add it to your `.env` file:
 
-Add to `~/.bashrc`:
-
-```bash
-export HSA_OVERRIDE_GFX_VERSION=11.0.0
-```
-
-Verified working on: RX 7800 XT, ROCm 6.2.3, Linux Mint 21.3
-
-### NVIDIA GPU (CUDA)
-
-Install PyTorch with CUDA **before** installing requirements:
-
-```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
-pip install -r requirements.txt --ignore-installed torch torchvision
+```env
+HF_TOKEN=hf_your_token_here
 ```
 
 ---
@@ -119,15 +105,29 @@ main.py             # CLI and GUI entry point
 | medium | 1.5 GB | slow    | high     |
 | large  | 3 GB   | slowest | highest  |
 
-Models are downloaded automatically on first use.
+Models are downloaded automatically on first use via Hugging Face Hub.
+
+---
+
+## GPU Support
+
+Currently the engine runs on CPU with `int8` quantization via CTranslate2, which significantly reduces memory usage compared to the previous PyTorch-based implementation — making it safe to run alongside GPU-heavy applications like DaVinci Resolve.
+
+GPU acceleration is planned for a future release:
+
+- [ ] **NVIDIA (CUDA)** — faster-whisper natively supports CUDA; planned as the next GPU backend
+- [ ] **AMD (ROCm)** — requires building CTranslate2 with HIP support from source; planned after CUDA support is stable
 
 ---
 
 ## Roadmap
 
+- [ ] NVIDIA GPU support (CUDA) via faster-whisper
+- [ ] AMD GPU support (ROCm) via CTranslate2-HIP
+- [ ] DaVinci Resolve integration — import generated SRT directly into timeline via Lua script
 - [ ] Highlight detection — automatically find the most interesting moments in the video
 - [ ] DaVinci Resolve plugin — auto-montage shorts/TikToks based on highlights (separate project)
-- [ ] Add more language options to GUI 
+- [ ] Add more language options to GUI
 - [ ] Transcription progress for non-chunked files
 
 ---

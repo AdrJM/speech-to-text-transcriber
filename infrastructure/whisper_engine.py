@@ -1,33 +1,59 @@
-import whisper
-import torch
+from faster_whisper import WhisperModel 
 from pathlib import Path
-import gc
 
 class WhisperEngine:
     """
-    Wraps OpenAI Whisper model for audio transcription.
+    Wraps faster-whisper model for audio transcription.
     
-    Automatically selects CUDA if available, otherwise falls back to CPU.
-    Model is loaded once in __init__ to avoid reloading on every transcription.
+    Runs on CPU with int8 quantization to minimize memory usage
+    and avoid conflicts with GPU-heavy applications like DaVinci Resolve.
+    Future: add device parameter for CUDA/ROCm support.
     """
     def __init__(self, model_size: str = "medium"):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"
+        self.compute_type = "int8"
         self.model_size = model_size
         self.model = self._load_model()
 
     def _load_model(self):
         """Loads Whisper model onto the selected device."""        
-        return whisper.load_model(self.model_size, device=self.device)
+        return WhisperModel(
+            self.model_size,
+            device = self.device,
+            compute_type = self.compute_type
+        )
     
     def transcribe(self, audio_path: Path, language: str = "pl") -> dict:
-        """Transcribes audio file and returns raw Whisper output dict."""
-        results = self.model.transcribe(
+        """
+        Transcribes audio file and returns dict compatible with existing map_to_domain.
+        Converts faster-whisper segment objects to openai-whisper-style dict format.
+        """
+        segments_generator, info = self.model.transcribe(
             str(audio_path),
             language = language,
-            fp16 = torch.cuda.is_available(),
             word_timestamps = True
         )
-        torch.cuda.empty_cache()
-        gc.collect()
+
+        segments = []
+
+        for i, segment in enumerate(segments_generator):
+            words = [
+                {
+                    "word": w.word,
+                    "start": w.start,
+                    "end": w.end
+                }
+                for w in (segment.words or [])
+            ]
+            segments.append({
+                "id": i,
+                "start": segment.start,
+                "end": segment.end,
+                "text": segment.text,
+                "words": words
+            })
         
-        return results
+        return {
+            "segments": segments,
+            "language": info.language
+        }
